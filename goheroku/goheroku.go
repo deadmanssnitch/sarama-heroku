@@ -33,7 +33,9 @@ type KafkaClient struct {
 var consumerTopic string
 var producerTopic string
 
-func createKafkaClient() {
+// <<Some helpful documentation here>>
+//
+func CreateKafkaClient() {
 	ac := AppConfig{}
 	err := envdecode.Decode(&ac)
 	if err != nil {

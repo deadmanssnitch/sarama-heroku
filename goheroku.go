@@ -3,7 +3,7 @@ package goheroku
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"fmt"
+	"errors"
 	"github.com/Shopify/sarama"
 	cluster "github.com/bsm/sarama-cluster"
 	"github.com/joeshaw/envdecode"
@@ -11,10 +11,6 @@ import (
 	"net/url"
 	"strings"
 )
-
-// This library makes connecting to Heroku easy.
-//
-//
 
 type appConfig struct {
 	URL           string `env:"KAFKA_URL,required"`
@@ -26,8 +22,8 @@ type appConfig struct {
 	BrokerAddrs   []string
 }
 
-// <<Some helpful documentation here>>
-//
+// This function requires that you specify the topic that the returned consumer
+// will consume from and the group that it will belong to.
 func NewConsumer(topic string, consumerGroup string) (*cluster.Consumer, error) {
 	ac, _ := setupConnection()
 	consumer, err := ac.createKafkaConsumer(topic, consumerGroup, ac.BrokerAddrs, ac.TLSConfig)
@@ -37,6 +33,8 @@ func NewConsumer(topic string, consumerGroup string) (*cluster.Consumer, error) 
 	return consumer, nil
 }
 
+// For move information about the difference between Async and Sync producers,
+// see the Sarama docs
 func NewAsyncProducer() (sarama.AsyncProducer, error) {
 	ac, _ := setupConnection()
 	producer, err := ac.createKafkaAsyncProducer(ac.BrokerAddrs, ac.TLSConfig)
@@ -46,6 +44,8 @@ func NewAsyncProducer() (sarama.AsyncProducer, error) {
 	return producer, nil
 }
 
+// For move information about the difference between Async and Sync producers,
+// see the Sarama docs
 func NewSyncProducer() (sarama.SyncProducer, error) {
 	ac, _ := setupConnection()
 	producer, err := ac.createKafkaSyncProducer(ac.BrokerAddrs, ac.TLSConfig)
@@ -53,6 +53,21 @@ func NewSyncProducer() (sarama.SyncProducer, error) {
 		return nil, err
 	}
 	return producer, nil
+}
+
+// To specify the topic or consumer group, the Kafka prefix needs
+// to appended to it. This function makes it possible without having
+// access to the app config.
+func AppendPrefixTo(str string) string {
+	ac := appConfig{}
+	err := envdecode.Decode(&ac)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if ac.Prefix != "" {
+		str = strings.Join([]string{ac.Prefix, str}, "")
+	}
+	return str
 }
 
 func setupConnection() (*appConfig, error) {
@@ -78,7 +93,7 @@ func (ac *appConfig) createTLSConfig() error {
 	roots := x509.NewCertPool()
 	ok := roots.AppendCertsFromPEM([]byte(ac.TrustedCert))
 	if !ok {
-		fmt.Printf("Unable to parse Root Cert:", ac.TrustedCert)
+		return errors.New("Unable to parse Root Cert. Please check your Heroku environment.")
 	}
 	// Setup certs for Sarama
 	cert, err := tls.X509KeyPair([]byte(ac.ClientCert), []byte(ac.ClientCertKey))
@@ -117,9 +132,8 @@ func (ac *appConfig) createKafkaConsumer(topic string, consumerGroup string, bro
 	config.ClientID = consumerGroup
 	config.Consumer.Return.Errors = true
 	group := consumerGroup
-	if ac.Prefix != "" {
-		group = strings.Join([]string{ac.Prefix, group}, "")
-	}
+	group = AppendPrefixTo(group)
+	topic = AppendPrefixTo(topic)
 	consumer, err := cluster.NewConsumer(brokers, group, []string{topic}, config)
 	if err != nil {
 		return nil, err

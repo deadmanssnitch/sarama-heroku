@@ -22,38 +22,41 @@ type AppConfig struct {
 	ClientCertKey string `env:"KAFKA_CLIENT_CERT_KEY,required"`
 	ClientCert    string `env:"KAFKA_CLIENT_CERT,required"`
 	Prefix        string `env:"KAFKA_PREFIX"`
-	ConsumerGroup string `env:"KAFKA_CONSUMER_GROUP,default=agent-data"`
 }
-
-type KafkaClient struct {
-	consumer *cluster.Consumer
-	producer sarama.AsyncProducer
-}
-
-var consumerTopic string
-var producerTopic string
 
 // <<Some helpful documentation here>>
 //
-func CreateKafkaClient() {
+func NewConsumer(topic string, consumerGroup string) (*cluster.Consumer, error) {
+	ac, _ := setupConnection
+	consumer, err := ac.createKafkaConsumer(brokerAddrs, tlsConfig)
+	if err != nil {
+		return nil, err
+	}
+}
+
+func NewAsyncProducer() (*sarama.AsyncProducer, error) {
+	ac, _ := setupConnection
+	producer, err := ac.createKafkaAsyncProducer(brokerAddrs, tlsConfig)
+	if err != nil {
+		return nil, err
+	}
+}
+
+func NewSyncProducer() (*sarama.SyncProducer, error) {
+	ac, _ := setupConnection
+	producer, err := ac.createKafkaSyncProducer(brokerAddrs, tlsConfig)
+	if err != nil {
+		return nil, err
+	}
+}
+
+func setupConnection() (*AppConfig, error) {
 	ac := AppConfig{}
 	err := envdecode.Decode(&ac)
 	if err != nil {
 		log.Fatal(err)
+		return nil, err
 	}
-	initTopics(&ac)
-}
-
-func initTopics(ac *AppConfig) {
-	if ac.Prefix != "" {
-		consumerTopic = strings.Join([]string{ac.Prefix, consumerTopic}, "")
-		producerTopic = strings.Join([]string{ac.Prefix, producerTopic}, "")
-	}
-}
-
-// Setup the Kafka client for producing and consuming messages.
-// Use the specified configuration environment variables.
-func createKafkaClient(ac *AppConfig) (*KafkaClient, error) {
 	tlsConfig, err := ac.createTLSConfig()
 	if err != nil {
 		return nil, err
@@ -62,22 +65,6 @@ func createKafkaClient(ac *AppConfig) (*KafkaClient, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	fmt.Printf("All broker server certificates are valid!")
-
-	consumer, err := ac.createKafkaConsumer(brokerAddrs, tlsConfig)
-	if err != nil {
-		return nil, err
-	}
-	producer, err := ac.createKafkaProducer(brokerAddrs, tlsConfig)
-	if err != nil {
-		return nil, err
-	}
-	fmt.Println("Kafka client created successfully.")
-	return &KafkaClient{
-		consumer: consumer,
-		producer: producer,
-	}, nil
 }
 
 // Create the TLS context, using the key and certificates provided.
@@ -97,7 +84,6 @@ func (ac *AppConfig) createTLSConfig() (*tls.Config, error) {
 		InsecureSkipVerify: true,
 		RootCAs:            roots,
 	}
-	fmt.Println("TLS context created")
 	return tlsConfig, nil
 }
 
@@ -112,10 +98,10 @@ func (ac *AppConfig) brokerAddresses() ([]string, error) {
 		}
 		addrs[i] = u.Host
 	}
-	fmt.Println("Broker addresses parsed.")
 	return addrs, nil
 }
 
+// Consumer group will default to Sarama if there is no value passed in
 func (ac *AppConfig) createKafkaConsumer(brokers []string, tc *tls.Config) (*cluster.Consumer, error) {
 	config := cluster.NewConfig()
 	config.Net.TLS.Config = tc
@@ -123,32 +109,39 @@ func (ac *AppConfig) createKafkaConsumer(brokers []string, tc *tls.Config) (*clu
 	config.Group.PartitionStrategy = cluster.StrategyRoundRobin
 	config.ClientID = ac.ConsumerGroup
 	config.Consumer.Return.Errors = true
-	fmt.Printf("Consuming topic %s on brokers: %s", consumerTopic, brokers)
 	group := ac.ConsumerGroup
 	if ac.Prefix != "" {
 		group = strings.Join([]string{ac.Prefix, group}, "")
 	}
 	consumer, err := cluster.NewConsumer(brokers, group, []string{consumerTopic}, config)
 	if err != nil {
-		fmt.Printf("group: %s", group)
-		fmt.Printf("client ID: %s", config.ClientID)
 		return nil, err
 	}
-	fmt.Println("Kafka consumer created successfully")
 	return consumer, nil
 }
 
-func (ac *AppConfig) createKafkaProducer(brokers []string, tc *tls.Config) (sarama.AsyncProducer, error) {
+func (ac *AppConfig) createKafkaAsyncProducer(brokers []string, tc *tls.Config) (sarama.AsyncProducer, error) {
 	config := sarama.NewConfig()
 	config.Net.TLS.Config = tc
 	config.Net.TLS.Enable = true
 	config.Producer.Return.Errors = true
 	config.Producer.RequiredAcks = sarama.WaitForAll // Default is WaitForLocal
-	config.ClientID = ac.ConsumerGroup
 	producer, err := sarama.NewAsyncProducer(brokers, config)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("Kafka producer created successfully")
+	return producer, nil
+}
+
+func (ac *AppConfig) createKafkaSyncProducer(brokers []string, tc *tls.Config) (sarama.AsyncProducer, error) {
+	config := sarama.NewConfig()
+	config.Net.TLS.Config = tc
+	config.Net.TLS.Enable = true
+	config.Producer.Return.Errors = true
+	config.Producer.RequiredAcks = sarama.WaitForAll // Default is WaitForLocal
+	producer, err := sarama.NewSyncProducer(brokers, config)
+	if err != nil {
+		return nil, err
+	}
 	return producer, nil
 }

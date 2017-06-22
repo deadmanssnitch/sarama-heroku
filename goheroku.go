@@ -11,6 +11,8 @@ import (
 	"strings"
 )
 
+//  NewClusterConsumer creates a bsm sarama-cluster consumer
+//  Provide the topic, consumer group and a cluster config
 func NewClusterConsumer(topic string, consumerGroup string, cfg *cluster.Config) (*cluster.Consumer, error) {
 	tc, err := createTLSConfig()
 	if err != nil {
@@ -34,6 +36,31 @@ func NewClusterConsumer(topic string, consumerGroup string, cfg *cluster.Config)
 	return consumer, nil
 }
 
+// TODO: Investigate use of/need for topic
+func NewConsumer(cfg *sarama.Config) (sarama.Consumer, error) {
+	tc, err := createTLSConfig()
+	if err != nil {
+		return nil, err
+	}
+	cfg.Net.TLS.Config = tc
+	cfg.Net.TLS.Enable = true
+
+	brokers, err := brokerAddresses()
+	if err != nil {
+		return nil, err
+	}
+	consumer, err := sarama.NewConsumer(brokers, cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return consumer, nil
+}
+
+//  NewAsyncProducer creates a sarama Async Producer
+//  Provide a sarama config
+//  For more information about the difference between Async and Sync producers
+//  see the sarama documentation
 func NewAsyncProducer(cfg *sarama.Config) (sarama.AsyncProducer, error) {
 	tc, err := createTLSConfig()
 	if err != nil {
@@ -54,6 +81,31 @@ func NewAsyncProducer(cfg *sarama.Config) (sarama.AsyncProducer, error) {
 	return producer, nil
 }
 
+//  NewSyncProducer creates a sarama Sync Producer
+//  Provide a sarama config
+//  For more information about the difference between Async and Sync producers
+//  see the sarama documentation
+func NewSyncProducer(cfg *sarama.Config) (sarama.SyncProducer, error) {
+	tc, err := createTLSConfig()
+	if err != nil {
+		return nil, err
+	}
+	cfg.Net.TLS.Config = tc
+	cfg.Net.TLS.Enable = true
+
+	brokers, err := brokerAddresses()
+	if err != nil {
+		return nil, err
+	}
+	producer, err := sarama.NewSyncProducer(brokers, cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return producer, nil
+}
+
+// Endangered function. TODO: Investigate usefulness of client
 func NewClient(cfg *sarama.Config) (sarama.Client, error) {
 	addrs, err := brokerAddresses()
 	if err != nil {

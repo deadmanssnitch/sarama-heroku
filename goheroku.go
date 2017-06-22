@@ -11,6 +11,61 @@ import (
 	"strings"
 )
 
+func NewClusterConsumer(topic string, consumerGroup string, cfg *cluster.Config) (*cluster.Consumer, error) {
+	tc, err := createTLSConfig()
+	if err != nil {
+		return nil, err
+	}
+	cfg.Net.TLS.Config = tc
+	cfg.Net.TLS.Enable = true
+
+	topic = AppendPrefixTo(topic)
+	group := AppendPrefixTo(consumerGroup)
+	brokers, err := brokerAddresses()
+	if err != nil {
+		return nil, err
+	}
+
+	consumer, err := cluster.NewConsumer(brokers, group, []string{topic}, cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return consumer, nil
+}
+
+func NewAsyncProducer(cfg *sarama.Config) (sarama.AsyncProducer, error) {
+	tc, err := createTLSConfig()
+	if err != nil {
+		return nil, err
+	}
+	cfg.Net.TLS.Config = tc
+	cfg.Net.TLS.Enable = true
+
+	brokers, err := brokerAddresses()
+	if err != nil {
+		return nil, err
+	}
+	producer, err := sarama.NewAsyncProducer(brokers, cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return producer, nil
+}
+
+func NewClient(cfg *sarama.Config) (sarama.Client, error) {
+	addrs, err := brokerAddresses()
+	if err != nil {
+		return nil, err
+	}
+	client, err := sarama.NewClient(addrs, cfg)
+	if err != nil {
+		return nil, err
+	}
+	return client, nil
+}
+
 // To specify the topic or consumer group, the Kafka prefix needs
 // to appended to it. This function makes it possible without having
 // access to the app config.
@@ -58,7 +113,10 @@ func createTLSConfig() (*tls.Config, error) {
 
 // Extract the host:port pairs from the Kafka URL(s)
 func brokerAddresses() ([]string, error) {
-	URL := os.Getenv("KAFKA_URL")
+	URL, ok := os.LookupEnv("KAFKA_URL")
+	if !ok {
+		return nil, errors.New("Kafka URL not found!")
+	}
 	urls := strings.Split(URL, ",")
 	addrs := make([]string, len(urls))
 	for i, v := range urls {

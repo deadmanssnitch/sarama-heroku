@@ -172,23 +172,23 @@ func AppendPrefixTo(str string) string {
 
 // Create the TLS context, using the key and certificates provided.
 func createTLSConfig() (*tls.Config, error) {
-	trustedCert, ok := os.LookupEnv("KAFKA_TRUSTED_CERT")
-	if !ok {
+	trustedCert := os.Getenv("KAFKA_TRUSTED_CERT")
+	if trustedCert == "" {
 		return nil, errors.New("Kafka Trusted Certificate not found!")
 	}
 
-	clientCertKey, ok := os.LookupEnv("KAFKA_CLIENT_CERT_KEY")
-	if !ok {
+	clientCertKey := os.Getenv("KAFKA_CLIENT_CERT_KEY")
+	if clientCertKey == "" {
 		return nil, errors.New("Kafka Client Certificate Key not found!")
 	}
 
-	clientCert, ok := os.LookupEnv("KAFKA_CLIENT_CERT")
-	if !ok {
+	clientCert := os.Getenv("KAFKA_CLIENT_CERT")
+	if clientCert == "" {
 		return nil, errors.New("Kafka Client Certificate not found!")
 	}
 
 	roots := x509.NewCertPool()
-	ok = roots.AppendCertsFromPEM([]byte(trustedCert))
+	ok := roots.AppendCertsFromPEM([]byte(trustedCert))
 	if !ok {
 		return nil, errors.New("Unable to parse Root Cert. Please check your Heroku environment.")
 	}
@@ -206,8 +206,8 @@ func createTLSConfig() (*tls.Config, error) {
 
 // Extract the host:port pairs from the Kafka URL(s)
 func brokerAddresses() ([]string, error) {
-	URL, ok := os.LookupEnv("KAFKA_URL")
-	if !ok {
+	URL := os.Getenv("KAFKA_URL")
+	if URL == "" {
 		return nil, errors.New("Kafka URL not found!")
 	}
 	urls := strings.Split(URL, ",")

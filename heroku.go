@@ -136,9 +136,34 @@ func TLSConfig() (*tls.Config, error) {
 		Certificates: []tls.Certificate{cert},
 		RootCAs:      roots,
 
-		// Disable verification because Heroku's certificates do not match their
-		// hostnames.
+		// Disable normal certificate verification because Heroku's certificates do
+		// not match their hostnames.
 		InsecureSkipVerify: true,
+
+		// VerifyPeerCertificate will check that the certificate was signed by the
+		// trusted certificate Heroku sets in the environment. The second parameter
+		// will always be empty since InsecureSkipVerify is true.
+		VerifyPeerCertificate: func(rawCerts [][]byte, _ [][]*x509.Certificate) error {
+			opts := x509.VerifyOptions{Roots: roots}
+
+			// Heroku is only giving one rawCert as of 2017-09-19. If that changes
+			// then this code may not longer be valid.
+			for _, raw := range rawCerts {
+				cert, err := x509.ParseCertificate(raw)
+				if err != nil {
+					return err
+				}
+
+				// If any of the raw certificates fail verification then we fail the
+				// entire process.
+				_, err = cert.Verify(opts)
+				if err != nil {
+					return err
+				}
+			}
+
+			return nil
+		},
 	}, nil
 }
 

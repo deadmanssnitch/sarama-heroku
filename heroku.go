@@ -15,6 +15,11 @@ import (
 //  NewClusterConsumer creates a bsm sarama-cluster consumer
 //  Provide the topic, consumer group and a cluster config
 func NewClusterConsumer(topic string, consumerGroup string, cfg *cluster.Config) (*cluster.Consumer, error) {
+	if cfg == nil {
+		cfg = cluster.NewConfig()
+	}
+
+	// Configure TLS from environment
 	tc, err := createTLSConfig()
 	if err != nil {
 		return nil, err
@@ -39,6 +44,10 @@ func NewClusterConsumer(topic string, consumerGroup string, cfg *cluster.Config)
 
 // TODO: Investigate use of/need for topic
 func NewConsumer(cfg *sarama.Config) (sarama.Consumer, error) {
+	if cfg == nil {
+		cfg = sarama.NewConfig()
+	}
+
 	tc, err := createTLSConfig()
 	if err != nil {
 		return nil, err
@@ -63,6 +72,10 @@ func NewConsumer(cfg *sarama.Config) (sarama.Consumer, error) {
 //  For more information about the difference between Async and Sync producers
 //  see the sarama documentation
 func NewAsyncProducer(cfg *sarama.Config) (sarama.AsyncProducer, error) {
+	if cfg == nil {
+		cfg = sarama.NewConfig()
+	}
+
 	tc, err := createTLSConfig()
 	if err != nil {
 		return nil, err
@@ -87,6 +100,10 @@ func NewAsyncProducer(cfg *sarama.Config) (sarama.AsyncProducer, error) {
 //  For more information about the difference between Async and Sync producers
 //  see the sarama documentation
 func NewSyncProducer(cfg *sarama.Config) (sarama.SyncProducer, error) {
+	if cfg == nil {
+		cfg = sarama.NewConfig()
+	}
+
 	tc, err := createTLSConfig()
 	if err != nil {
 		return nil, err

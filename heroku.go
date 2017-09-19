@@ -91,16 +91,17 @@ func NewSyncProducer(cfg *sarama.Config) (sarama.SyncProducer, error) {
 }
 
 // AppendPrefixTo adds the env variable KAFKA_PREFIX to the given string if
-// necessary. Heroku requires prefixing topics and consumer group ids with the
-// prefix.
-func AppendPrefixTo(str string) string {
+// necessary. Heroku requires prefixing topics and consumer group names with
+// the prefix on multi-tenant plans. It is safe to use on dedicated clusters if
+// KAFKA_PREFIX is not set.
+func AppendPrefixTo(name string) string {
 	prefix := os.Getenv("KAFKA_PREFIX")
 
-	if strings.HasPrefix(str, prefix) {
-		return str
+	if strings.HasPrefix(name, prefix) {
+		return name
 	}
 
-	return prefix + str
+	return prefix + name
 }
 
 // Create the TLS context, using the key and certificates provided.

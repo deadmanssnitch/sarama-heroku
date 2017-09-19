@@ -47,8 +47,8 @@ config.Consumer.Return.Errors = true
 consumer, err := heroku.NewClusterConsumer("group-id", []string{"topic"}, config)
 ```
 
-:bangbang:: For multi-tenant plans you will need to create the consumer group
-before you can use it.
+:heavy_exclamation_mark: Multi-tenant plans require creating the consumer
+groups before you can use them.
 ```console
 heroku kafka:consumer-groups:create 'group-id' -a [app]
 ```
@@ -74,8 +74,9 @@ config.Producer.RequiredAcks = sarama.WaitForAll
 producer, err := heroku.NewAsyncProducer(config)
 ```
 
-:bangbang: Multi-tenant plans require adding the KAFKA_PREFIX when sending
-messages. You should use `heroku.AppendPrefixTo("topic")` to ensure it's set.
+:heavy_exclamation_mark: Multi-tenant plans require adding the KAFKA_PREFIX
+when sending messages. You should use heroku.AppendPrefixTo("topic") to ensure
+it's set.
 
 ```go
 producer <- &sarama.ProducerMessage{

@@ -1,14 +1,15 @@
-package goheroku
+package heroku
 
 import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
-	"github.com/Shopify/sarama"
-	cluster "github.com/bsm/sarama-cluster"
 	"net/url"
 	"os"
 	"strings"
+
+	"github.com/Shopify/sarama"
+	cluster "github.com/bsm/sarama-cluster"
 )
 
 //  NewClusterConsumer creates a bsm sarama-cluster consumer
@@ -36,16 +37,6 @@ func NewClusterConsumer(topic string, consumerGroup string, cfg *cluster.Config)
 	return consumer, nil
 }
 
-// A quick and easy cluster consumer built with default configs
-func NewQuickClusterConsumer(topic string, groupID string) (*cluster.Consumer, error) {
-	cfg := cluster.NewConfig()
-	consumer, err := NewClusterConsumer(topic, groupID, cfg)
-	if err != nil {
-		return nil, err
-	}
-	return consumer, nil
-}
-
 // TODO: Investigate use of/need for topic
 func NewConsumer(cfg *sarama.Config) (sarama.Consumer, error) {
 	tc, err := createTLSConfig()
@@ -64,16 +55,6 @@ func NewConsumer(cfg *sarama.Config) (sarama.Consumer, error) {
 		return nil, err
 	}
 
-	return consumer, nil
-}
-
-// A quick and easy sarama consumer built with default configs
-func NewQuickConsumer() (sarama.Consumer, error) {
-	cfg := sarama.NewConfig()
-	consumer, err := NewConsumer(cfg)
-	if err != nil {
-		return nil, err
-	}
 	return consumer, nil
 }
 
@@ -101,16 +82,6 @@ func NewAsyncProducer(cfg *sarama.Config) (sarama.AsyncProducer, error) {
 	return producer, nil
 }
 
-// A quick and easy async producer built with default configs
-func NewQuickAsyncProducer() (sarama.AsyncProducer, error) {
-	cfg := sarama.NewConfig()
-	producer, err := NewAsyncProducer(cfg)
-	if err != nil {
-		return nil, err
-	}
-	return producer, nil
-}
-
 //  NewSyncProducer creates a sarama Sync Producer
 //  Provide a sarama config
 //  For more information about the difference between Async and Sync producers
@@ -133,30 +104,6 @@ func NewSyncProducer(cfg *sarama.Config) (sarama.SyncProducer, error) {
 	}
 
 	return producer, nil
-}
-
-// A quick and easy sync producer built with default configs
-func NewQuickSyncProducer() (sarama.SyncProducer, error) {
-	cfg := sarama.NewConfig()
-	cfg.Producer.Return.Successes = true
-	producer, err := NewSyncProducer(cfg)
-	if err != nil {
-		return nil, err
-	}
-	return producer, nil
-}
-
-// Endangered function. TODO: Investigate usefulness of client
-func NewClient(cfg *sarama.Config) (sarama.Client, error) {
-	addrs, err := brokerAddresses()
-	if err != nil {
-		return nil, err
-	}
-	client, err := sarama.NewClient(addrs, cfg)
-	if err != nil {
-		return nil, err
-	}
-	return client, nil
 }
 
 // To specify the topic or consumer group, the Kafka prefix needs

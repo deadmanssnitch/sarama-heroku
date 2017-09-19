@@ -35,7 +35,7 @@ func NewClusterConsumer(groupID string, topics []string, cfg *cluster.Config) (*
 		topics[idx] = AppendPrefixTo(topic)
 	}
 
-	brokers, err := brokerAddresses()
+	brokers, err := Brokers()
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +61,7 @@ func NewConsumer(cfg *sarama.Config) (sarama.Consumer, error) {
 	cfg.Net.TLS.Config = tc
 	cfg.Net.TLS.Enable = true
 
-	brokers, err := brokerAddresses()
+	brokers, err := Brokers()
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +89,7 @@ func NewAsyncProducer(cfg *sarama.Config) (sarama.AsyncProducer, error) {
 	cfg.Net.TLS.Config = tc
 	cfg.Net.TLS.Enable = true
 
-	brokers, err := brokerAddresses()
+	brokers, err := Brokers()
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +117,7 @@ func NewSyncProducer(cfg *sarama.Config) (sarama.SyncProducer, error) {
 	cfg.Net.TLS.Config = tc
 	cfg.Net.TLS.Enable = true
 
-	brokers, err := brokerAddresses()
+	brokers, err := Brokers()
 	if err != nil {
 		return nil, err
 	}
@@ -177,11 +177,12 @@ func createTLSConfig() (*tls.Config, error) {
 }
 
 // Extract the host:port pairs from the Kafka URL(s)
-func brokerAddresses() ([]string, error) {
+func Brokers() ([]string, error) {
 	URL := os.Getenv("KAFKA_URL")
 	if URL == "" {
-		return nil, errors.New("Kafka URL not found!")
+		return nil, errors.New("KAFKA_URL is not set in environment")
 	}
+
 	urls := strings.Split(URL, ",")
 	addrs := make([]string, len(urls))
 	for i, v := range urls {
@@ -189,7 +190,15 @@ func brokerAddresses() ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
+
+		// Validate the kafka+ssl url format. This simplifies our handling by
+		// requiring a strict format that Heroku should provide for us.
+		if u.Scheme != "kafka+ssl" {
+			return nil, errors.New("kafka urls should start with kafka+ssl://")
+		}
+
 		addrs[i] = u.Host
 	}
+
 	return addrs, nil
 }

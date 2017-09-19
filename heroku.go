@@ -12,8 +12,9 @@ import (
 	cluster "github.com/bsm/sarama-cluster"
 )
 
-//  NewClusterConsumer creates a bsm sarama-cluster consumer
-//  Provide the topic, consumer group and a cluster config
+// NewClusterConsumer creates a github.com/bsm/sarama-cluster.Consumer based on
+// Heroku Kafka standard environment configs. Giving nil for cfg will create a
+// generic config.
 func NewClusterConsumer(groupID string, topics []string, cfg *cluster.Config) (*cluster.Consumer, error) {
 	if cfg == nil {
 		cfg = cluster.NewConfig()
@@ -40,15 +41,11 @@ func NewClusterConsumer(groupID string, topics []string, cfg *cluster.Config) (*
 		return nil, err
 	}
 
-	consumer, err := cluster.NewConsumer(brokers, groupID, topics, cfg)
-	if err != nil {
-		return nil, err
-	}
-
-	return consumer, nil
+	return cluster.NewConsumer(brokers, groupID, topics, cfg)
 }
 
-// TODO: Investigate use of/need for topic
+// NewConsumer creates a github.com/Shopify/sarama.Consumer configured from the
+// standard Heroku Kafka environment.
 func NewConsumer(cfg *sarama.Config) (sarama.Consumer, error) {
 	if cfg == nil {
 		cfg = sarama.NewConfig()
@@ -73,10 +70,10 @@ func NewConsumer(cfg *sarama.Config) (sarama.Consumer, error) {
 	return consumer, nil
 }
 
-//  NewAsyncProducer creates a sarama Async Producer
-//  Provide a sarama config
-//  For more information about the difference between Async and Sync producers
-//  see the sarama documentation
+// NewAsyncProducer creates a github.com/Shopify/sarama.AsyncProducer
+// configured from the standard Heroku Kafka environment. When publishing
+// messages to Multitenant Kafka all topics need to start with KAFKA_PREFIX
+// which is best added using AppendPrefixTo.
 func NewAsyncProducer(cfg *sarama.Config) (sarama.AsyncProducer, error) {
 	if cfg == nil {
 		cfg = sarama.NewConfig()
@@ -93,18 +90,14 @@ func NewAsyncProducer(cfg *sarama.Config) (sarama.AsyncProducer, error) {
 	if err != nil {
 		return nil, err
 	}
-	producer, err := sarama.NewAsyncProducer(brokers, cfg)
-	if err != nil {
-		return nil, err
-	}
 
-	return producer, nil
+	return sarama.NewAsyncProducer(brokers, cfg)
 }
 
-//  NewSyncProducer creates a sarama Sync Producer
-//  Provide a sarama config
-//  For more information about the difference between Async and Sync producers
-//  see the sarama documentation
+// NewSyncProducer creates a github.com/Shopify/sarama.SyncProducer configured
+// from the standard Heroku Kafka environment. When publishing messages to
+// Multitenant Kafka all topics need to start with KAFKA_PREFIX which is best
+// added using AppendPrefixTo.
 func NewSyncProducer(cfg *sarama.Config) (sarama.SyncProducer, error) {
 	if cfg == nil {
 		cfg = sarama.NewConfig()
@@ -121,12 +114,8 @@ func NewSyncProducer(cfg *sarama.Config) (sarama.SyncProducer, error) {
 	if err != nil {
 		return nil, err
 	}
-	producer, err := sarama.NewSyncProducer(brokers, cfg)
-	if err != nil {
-		return nil, err
-	}
 
-	return producer, nil
+	return sarama.NewSyncProducer(brokers, cfg)
 }
 
 // AppendPrefixTo adds the env variable KAFKA_PREFIX to the given string if
@@ -146,29 +135,31 @@ func AppendPrefixTo(str string) string {
 func createTLSConfig() (*tls.Config, error) {
 	trustedCert := os.Getenv("KAFKA_TRUSTED_CERT")
 	if trustedCert == "" {
-		return nil, errors.New("Kafka Trusted Certificate not found!")
+		return nil, errors.New("KAFKA_TRUSTED_CERT is not set in environment")
 	}
 
 	clientCertKey := os.Getenv("KAFKA_CLIENT_CERT_KEY")
 	if clientCertKey == "" {
-		return nil, errors.New("Kafka Client Certificate Key not found!")
+		return nil, errors.New("KAFKA_CLIENT_CERT_KEY is not set in environment")
 	}
 
 	clientCert := os.Getenv("KAFKA_CLIENT_CERT")
 	if clientCert == "" {
-		return nil, errors.New("Kafka Client Certificate not found!")
+		return nil, errors.New("KAFKA_CLIENT_CERT is not set in environment")
 	}
 
 	roots := x509.NewCertPool()
 	ok := roots.AppendCertsFromPEM([]byte(trustedCert))
 	if !ok {
-		return nil, errors.New("Unable to parse Root Cert. Please check your Heroku environment.")
+		return nil, errors.New("Invalid Root Cert. Please check your Heroku environment.")
 	}
+
 	// Setup certs for Sarama
 	cert, err := tls.X509KeyPair([]byte(clientCert), []byte(clientCertKey))
 	if err != nil {
 		return nil, err
 	}
+
 	return &tls.Config{
 		Certificates:       []tls.Certificate{cert},
 		InsecureSkipVerify: true,
@@ -176,7 +167,8 @@ func createTLSConfig() (*tls.Config, error) {
 	}, nil
 }
 
-// Extract the host:port pairs from the Kafka URL(s)
+// Brokers returns a list of host:port addresses for the Kafka brokers set in
+// KAFKA_URL.
 func Brokers() ([]string, error) {
 	URL := os.Getenv("KAFKA_URL")
 	if URL == "" {

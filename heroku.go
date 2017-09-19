@@ -16,17 +16,10 @@ import (
 // Heroku Kafka standard environment configs. Giving nil for cfg will create a
 // generic config.
 func NewClusterConsumer(groupID string, topics []string, cfg *cluster.Config) (*cluster.Consumer, error) {
-	if cfg == nil {
-		cfg = cluster.NewConfig()
-	}
-
-	// Configure TLS from environment
-	tc, err := createTLSConfig()
+	err := prepareClusterConfig(cfg)
 	if err != nil {
 		return nil, err
 	}
-	cfg.Net.TLS.Config = tc
-	cfg.Net.TLS.Enable = true
 
 	// Consumer groups require the Kafka prefix
 	groupID = AppendPrefixTo(groupID)
@@ -47,16 +40,9 @@ func NewClusterConsumer(groupID string, topics []string, cfg *cluster.Config) (*
 // NewConsumer creates a github.com/Shopify/sarama.Consumer configured from the
 // standard Heroku Kafka environment.
 func NewConsumer(cfg *sarama.Config) (sarama.Consumer, error) {
-	if cfg == nil {
-		cfg = sarama.NewConfig()
-	}
-
-	tc, err := createTLSConfig()
-	if err != nil {
+	if err := prepareConfig(cfg); err != nil {
 		return nil, err
 	}
-	cfg.Net.TLS.Config = tc
-	cfg.Net.TLS.Enable = true
 
 	brokers, err := Brokers()
 	if err != nil {
@@ -75,16 +61,9 @@ func NewConsumer(cfg *sarama.Config) (sarama.Consumer, error) {
 // messages to Multitenant Kafka all topics need to start with KAFKA_PREFIX
 // which is best added using AppendPrefixTo.
 func NewAsyncProducer(cfg *sarama.Config) (sarama.AsyncProducer, error) {
-	if cfg == nil {
-		cfg = sarama.NewConfig()
-	}
-
-	tc, err := createTLSConfig()
-	if err != nil {
+	if err := prepareConfig(cfg); err != nil {
 		return nil, err
 	}
-	cfg.Net.TLS.Config = tc
-	cfg.Net.TLS.Enable = true
 
 	brokers, err := Brokers()
 	if err != nil {
@@ -99,16 +78,9 @@ func NewAsyncProducer(cfg *sarama.Config) (sarama.AsyncProducer, error) {
 // Multitenant Kafka all topics need to start with KAFKA_PREFIX which is best
 // added using AppendPrefixTo.
 func NewSyncProducer(cfg *sarama.Config) (sarama.SyncProducer, error) {
-	if cfg == nil {
-		cfg = sarama.NewConfig()
-	}
-
-	tc, err := createTLSConfig()
-	if err != nil {
+	if err := prepareConfig(cfg); err != nil {
 		return nil, err
 	}
-	cfg.Net.TLS.Config = tc
-	cfg.Net.TLS.Enable = true
 
 	brokers, err := Brokers()
 	if err != nil {
@@ -132,7 +104,7 @@ func AppendPrefixTo(str string) string {
 }
 
 // Create the TLS context, using the key and certificates provided.
-func createTLSConfig() (*tls.Config, error) {
+func TLSConfig() (*tls.Config, error) {
 	trustedCert := os.Getenv("KAFKA_TRUSTED_CERT")
 	if trustedCert == "" {
 		return nil, errors.New("KAFKA_TRUSTED_CERT is not set in environment")
@@ -154,16 +126,19 @@ func createTLSConfig() (*tls.Config, error) {
 		return nil, errors.New("Invalid Root Cert. Please check your Heroku environment.")
 	}
 
-	// Setup certs for Sarama
+	// Create a certificate bundle for the TLS Config
 	cert, err := tls.X509KeyPair([]byte(clientCert), []byte(clientCertKey))
 	if err != nil {
 		return nil, err
 	}
 
 	return &tls.Config{
-		Certificates:       []tls.Certificate{cert},
+		Certificates: []tls.Certificate{cert},
+		RootCAs:      roots,
+
+		// Disable verification because Heroku's certificates do not match their
+		// hostnames.
 		InsecureSkipVerify: true,
-		RootCAs:            roots,
 	}, nil
 }
 
@@ -193,4 +168,36 @@ func Brokers() ([]string, error) {
 	}
 
 	return addrs, nil
+}
+
+func prepareClusterConfig(cfg *cluster.Config) error {
+	if cfg == nil {
+		cfg = cluster.NewConfig()
+	}
+
+	tc, err := TLSConfig()
+	if err != nil {
+		return err
+	}
+
+	cfg.Net.TLS.Config = tc
+	cfg.Net.TLS.Enable = true
+
+	return nil
+}
+
+func prepareConfig(cfg *sarama.Config) error {
+	if cfg == nil {
+		cfg = sarama.NewConfig()
+	}
+
+	tc, err := TLSConfig()
+	if err != nil {
+		return err
+	}
+
+	cfg.Net.TLS.Config = tc
+	cfg.Net.TLS.Enable = true
+
+	return nil
 }

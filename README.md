@@ -4,9 +4,10 @@
 
 ## Overview
 
-sarama-heroku is a Go library that makes it easy to connect to Kafka on Heroku.
-We handle all the certificate management and configuration so that you can
-start up your Kafka consumers and producers with minimal effort.
+sarama-heroku is a Go library that makes it easy to connect to [Heroku
+Kafka](https://www.heroku.com/kafka).  We handle all the certificate management
+and configuration so that you can start up your Kafka consumers and producers
+with minimal effort.
 
 ## Installation
 

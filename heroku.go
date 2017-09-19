@@ -14,7 +14,7 @@ import (
 
 //  NewClusterConsumer creates a bsm sarama-cluster consumer
 //  Provide the topic, consumer group and a cluster config
-func NewClusterConsumer(topic string, consumerGroup string, cfg *cluster.Config) (*cluster.Consumer, error) {
+func NewClusterConsumer(groupID string, topics []string, cfg *cluster.Config) (*cluster.Consumer, error) {
 	if cfg == nil {
 		cfg = cluster.NewConfig()
 	}
@@ -27,14 +27,20 @@ func NewClusterConsumer(topic string, consumerGroup string, cfg *cluster.Config)
 	cfg.Net.TLS.Config = tc
 	cfg.Net.TLS.Enable = true
 
-	topic = AppendPrefixTo(topic)
-	group := AppendPrefixTo(consumerGroup)
+	// Consumer groups require the Kafka prefix
+	groupID = AppendPrefixTo(groupID)
+
+	// Ensure all topics have the Kafka prefix applied
+	for idx, topic := range topics {
+		topics[idx] = AppendPrefixTo(topic)
+	}
+
 	brokers, err := brokerAddresses()
 	if err != nil {
 		return nil, err
 	}
 
-	consumer, err := cluster.NewConsumer(brokers, group, []string{topic}, cfg)
+	consumer, err := cluster.NewConsumer(brokers, groupID, topics, cfg)
 	if err != nil {
 		return nil, err
 	}

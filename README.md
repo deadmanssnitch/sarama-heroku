@@ -13,7 +13,7 @@ with minimal effort.
 
 ```console
 go get -u github.com/deadmanssnitch/sarama-heroku
-```  
+```
 
 ### Heroku
 
@@ -53,7 +53,7 @@ groups before you can use them.
 heroku kafka:consumer-groups:create 'group-id' -a [app]
 ```
 
-For an example on using sarama-cluster 
+For an example on using sarama-cluster
 [check the sarama-cluster repo](https://github.com/bsm/sarama-cluster) or
 [see the documentation](https://godoc.org/github.com/bsm/sarama-cluster).
 
@@ -120,5 +120,5 @@ Before you contribute, please take a look at this [helpful article](https://open
 	- A screenshot, gif, or detailed description of before and after functionality
 	- Any applicable tests, if warranted
 	- Instructions on how to QA if applicable
-	
+
 Thank you for contributing to open source software. Your work is helping us all make better software. Happy coding!

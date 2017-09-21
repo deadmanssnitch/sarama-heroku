@@ -4,10 +4,10 @@
 
 ## Overview
 
-sarama-heroku is a Go library that makes it easy to connect to [Heroku
-Kafka](https://www.heroku.com/kafka).  We handle all the certificate management
-and configuration so that you can start up your Kafka consumers and producers
-with minimal effort.
+sarama-heroku is a Go library that makes it easy to connect to [Apache Kafka on
+Heroku](https://www.heroku.com/kafka).  We handle all the certificate
+management and configuration so that you can start up your Kafka consumers and
+producers with minimal effort.
 
 ## Installation
 
@@ -22,7 +22,7 @@ Make sure you have the Heroku CLI plugin installed:
 heroku plugins:install heroku-kafka
 ```
 
-Next, you'll need to provision a new Kafka install or attach an existing one to
+Next, you'll need to provision a new Kafka add-on or attach an existing one to
 your app. To provision run:
 ```console
 heroku addons:create heroku-kafka:basic-0 -a [app]
@@ -90,7 +90,8 @@ For more information about how to set up a config see the
 
 ## Environment
 
-Sarama Heroku depends on the following environment variables that are set by Heroku Kafka
+Sarama Heroku depends on the following environment variables that are set by
+the Heroku Kafka add-on:
 
   - KAFKA\_CLIENT\_CERT
   - KAFKA\_CLIENT\_CERT\_KEY

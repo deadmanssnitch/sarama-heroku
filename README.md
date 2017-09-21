@@ -106,3 +106,7 @@ appreciate you and the work you're doing on this SO much.
 
 For details [see CONTRIBUTING.md](CONTRIBUTING.md)
 
+## Thanks
+
+This package was extracted from [Dead Man's Snitch](https://deadmanssnitch.com),
+a dead simple monitoring service for Cron jobs and system liveness.

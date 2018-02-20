@@ -31,20 +31,22 @@ heroku kafka:wait -a [app]
 
 ## Consumers
 
-Now you are ready to start using the library. From here there are two options.
-You can either create your own configuration or it is possible to pass in a nil
-config to create a cluster consumer based on the defaults configurations.
+Now you are ready to start using the library.
 
-Create a cluster consumer using a custom config like the following:
+Create a cluster consumer config like the following:
 
 ```go
-config := cluster.NewConfig()
-config.Group.PartitionStrategy = cluster.StrategyRoundRobin
-config.Group.Return.Notifications = true
-config.ClientID = "app-name." + os.Getenv("DYNO")
-config.Consumer.Return.Errors = true
+kfkCfg, err := heroku.NewConfig()
 
-consumer, err := heroku.NewClusterConsumer("group-id", []string{"topic"}, config)
+config := cluster.NewConfig()
+config.ClientID = "app-name." + os.Getenv("DYNO")
+config.Net.TLS.Enable = kfkCfg.TLS()
+config.Net.TLS.Config = kfkCfg.TLSConfig()
+
+groupID := kfkCfg.Prefix("group-id")
+topics := []string{kfkCfg.Prefix("topic")}
+
+consumer, err := cluster.NewClusterConsumer(groupID, topics, config)
 ```
 
 :heavy_exclamation_mark: Multi-tenant plans require creating the consumer
@@ -59,19 +61,21 @@ For an example on using sarama-cluster
 
 ## Producers
 
-There are multiple options for producers. Similar to consumers, you can specify
-your own config or pass in a nil config for defaults. Furthermore, a producer
-can be either Sync or Async. Read up on the differences
+Furthermore, a producer can be either Sync or Async. Read up on the differences
 [here](https://godoc.org/github.com/Shopify/sarama).
 
 Creating an async producer from a custom config:
 
 ```go
+kfkCfg, err := heroku.NewConfig()
+
 config := sarama.NewConfig()
 config.Producer.Return.Errors = true
 config.Producer.RequiredAcks = sarama.WaitForAll
+config.Net.TLS.Enable = kfkCfg.TLS()
+config.Net.TLS.Config = kfkCfg.TLSConfig()
 
-producer, err := heroku.NewAsyncProducer(config)
+producer, err := sarama.NewAsyncProducer(kfkCfg.Brokers(), config)
 ```
 
 :heavy_exclamation_mark: Multi-tenant plans require adding the KAFKA_PREFIX
@@ -87,6 +91,14 @@ producer <- &sarama.ProducerMessage{
 ```
 For more information about how to set up a config see the
 [sarama documentation](http://godoc.org/github.com/Shopify/sarama#Config).
+
+## Multiple Kafka Instances
+
+Use `heroku.NewConfigWithName` to build a config for a named Kafka instance.
+
+```go
+kfkCfg, err := heroku.NewConfigWithName("ONYX")
+```
 
 ## Environment
 

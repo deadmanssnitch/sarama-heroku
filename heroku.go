@@ -6,35 +6,7 @@ import (
 	"strings"
 
 	"github.com/Shopify/sarama"
-	cluster "github.com/bsm/sarama-cluster"
 )
-
-// NewClusterConsumer creates a github.com/bsm/sarama-cluster.Consumer based on
-// Heroku Kafka standard environment configs. Giving nil for cfg will create a
-// generic config.
-func NewClusterConsumer(groupID string, topics []string, cfg *cluster.Config) (*cluster.Consumer, error) {
-	herokuCfg, err := NewConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	if cfg == nil {
-		cfg = cluster.NewConfig()
-	}
-
-	cfg.Net.TLS.Enable = herokuCfg.TLS()
-	cfg.Net.TLS.Config = herokuCfg.TLSConfig()
-
-	// Consumer groups require the Kafka prefix
-	groupID = herokuCfg.Prefix(groupID)
-
-	// Ensure all topics have the Kafka prefix applied
-	for idx, topic := range topics {
-		topics[idx] = herokuCfg.Prefix(topic)
-	}
-
-	return cluster.NewConsumer(herokuCfg.Brokers(), groupID, topics, cfg)
-}
 
 // NewConsumer creates a github.com/Shopify/sarama.Consumer configured from the
 // standard Heroku Kafka environment.

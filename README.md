@@ -55,10 +55,6 @@ groups before you can use them.
 heroku kafka:consumer-groups:create 'group-id' -a [app]
 ```
 
-For an example on using sarama-cluster
-[check the sarama-cluster repo](https://github.com/bsm/sarama-cluster) or
-[see the documentation](https://godoc.org/github.com/bsm/sarama-cluster).
-
 ## Producers
 
 Furthermore, a producer can be either Sync or Async. Read up on the differences
